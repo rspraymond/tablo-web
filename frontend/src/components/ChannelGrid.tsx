@@ -1,5 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { api, type GuideChannel, type GridChannel } from "../api/tablo";
+import {
+  type ContentFilter,
+  matchesContentFilter,
+  guideRowMatchesSearch,
+} from "../lib/filters";
 import { ChannelCard } from "./ChannelCard";
 import { VideoPlayer } from "./VideoPlayer";
 import { LibraryView } from "./LibraryView";
@@ -65,8 +70,6 @@ interface Props {
 
 type Tab = "live" | "grid" | "library";
 
-type ContentFilter = "all" | "movies" | "sports" | "news" | "reality" | "documentary" | "ota" | "fast";
-
 const CONTENT_FILTERS: { id: ContentFilter; label: string; icon: string }[] = [
   { id: "all",          label: "All",          icon: "⊞" },
   { id: "movies",       label: "Movies",        icon: "🎬" },
@@ -77,21 +80,6 @@ const CONTENT_FILTERS: { id: ContentFilter; label: string; icon: string }[] = [
   { id: "ota",          label: "Broadcast",     icon: "📡" },
   { id: "fast",         label: "Streaming",     icon: "⚡" },
 ];
-
-function matchesContentFilter(ch: GuideChannel, f: ContentFilter): boolean {
-  if (f === "all") return true;
-  if (f === "ota")  return ch.kind === "ota";
-  if (f === "fast") return ch.kind === "ott";
-  const prog = ch.current_program;
-  if (!prog) return false;
-  const genres = prog.genres ?? [];
-  if (f === "movies")       return prog.kind === "movieAiring";
-  if (f === "sports")       return prog.kind === "sportEvent" || genres.some(g => /sport/i.test(g));
-  if (f === "news")         return genres.some(g => /news/i.test(g));
-  if (f === "reality")      return genres.some(g => /reality/i.test(g));
-  if (f === "documentary")  return genres.some(g => /documentary/i.test(g));
-  return true;
-}
 
 export function ChannelGrid({ onLogout }: Props) {
   const [playing, setPlaying] = useState<GuideChannel | null>(null);
@@ -112,17 +100,12 @@ export function ChannelGrid({ onLogout }: Props) {
 
   const { channels, loading: isLoading } = useGuideStream(activeTab === "live");
 
-  const filtered = channels.filter(ch => {
-    if (!matchesContentFilter(ch, contentFilter)) return false;
-    if (!filter) return true;
-    const q = filter.toLowerCase();
-    return (
-      ch.call_sign.toLowerCase().includes(q) ||
-      ch.network.toLowerCase().includes(q) ||
-      ch.display_name.toLowerCase().includes(q) ||
-      (ch.current_program?.title?.toLowerCase().includes(q) ?? false)
-    );
-  });
+  const filtered = useMemo(() => {
+    return channels.filter(ch => {
+      if (!matchesContentFilter(ch, contentFilter)) return false;
+      return guideRowMatchesSearch(ch, filter);
+    });
+  }, [channels, contentFilter, filter]);
 
   const handlePlay = (ch: GuideChannel | GridChannel) => {
     const isGrid = 'airings' in ch;
@@ -143,18 +126,10 @@ export function ChannelGrid({ onLogout }: Props) {
   return (
     <>
       {playing && (
-        <VideoPlayer 
+        <VideoPlayer
           key={playing.identifier}
-          channel={{
-            identifier: playing.identifier,
-            call_sign: playing.call_sign,
-            major: playing.major,
-            minor: playing.minor,
-            network: playing.network,
-            kind: playing.kind,
-            display_name: playing.display_name
-          }} 
-          onClose={() => setPlaying(null)} 
+          channel={playing}
+          onClose={() => setPlaying(null)}
         />
       )}
 
@@ -198,9 +173,8 @@ export function ChannelGrid({ onLogout }: Props) {
               </button>
             </nav>
 
-            {/* Search */}
-            {activeTab === "live" && (
-              <div className="relative flex-1 max-w-sm">
+            {/* Search (all tabs) */}
+            <div className="relative flex-1 max-w-sm">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20"
                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -215,7 +189,6 @@ export function ChannelGrid({ onLogout }: Props) {
                              focus:bg-white/10 transition shadow-inner"
                 />
               </div>
-            )}
 
             <div className="flex items-center gap-4 ml-4">
               <ProfileMenu email={userEmail} onLogout={onLogout} />
@@ -285,7 +258,7 @@ export function ChannelGrid({ onLogout }: Props) {
                  <h1 className="text-3xl font-black tracking-tight text-white mb-2 uppercase italic">TV GUIDE</h1>
                  <p className="text-white/30 text-sm font-medium tracking-wide uppercase">Traditional timeline view of all upcoming airings</p>
                </div>
-               <GuideGridView onPlay={handlePlay} />
+               <GuideGridView onPlay={handlePlay} search={filter} />
             </div>
           )}
 
@@ -295,7 +268,7 @@ export function ChannelGrid({ onLogout }: Props) {
                  <h1 className="text-3xl font-black tracking-tight text-white mb-2 uppercase italic">RECORDINGS</h1>
                  <p className="text-white/30 text-sm font-medium tracking-wide uppercase">Watch and manage your saved content</p>
               </div>
-              <LibraryView />
+              <LibraryView search={filter} />
             </div>
           )}
         </main>

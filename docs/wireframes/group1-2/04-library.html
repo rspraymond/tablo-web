@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { theme: { extend: {
+  colors: { surface: { DEFAULT:'#0d0d14', raised:'#13131e', overlay:'#1a1a28', border:'rgba(255,255,255,0.08)' },
+             accent: { DEFAULT:'#5b8af5', glow:'rgba(91,138,245,0.25)' } },
+  fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+}}};
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { background:#0d0d14; color:#fff; font-family:Inter,system-ui,sans-serif; }
+  .glass { background:rgba(255,255,255,0.04); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.08); }
+  .anno { position:absolute; width:20px; height:20px; border-radius:9999px; background:#5b8af5; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 3px rgba(91,138,245,.35); z-index:50; }
+</style>
+</head>
+<body class="antialiased">
+<div class="min-h-screen flex flex-col bg-surface">
+  <header class="sticky top-0 z-10 glass border-b border-surface-border">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center gap-4">
+      <div class="flex items-center gap-2.5 mr-6">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-lg shadow-accent/20" style="background:linear-gradient(135deg,#5b8af5,#7c5bf5)">
+          <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 20.25h12m-7.5-3v3m3-3v3m-10.125-3h17.25c.621 0 1.125-.504 1.125-1.125V4.875C21 4.254 20.496 3.75 19.875 3.75H4.125C3.504 3.75 3 4.254 3 4.875v11.25c0 .621.504 1.125 1.125 1.125z" /></svg>
+        </div>
+        <span class="font-black text-lg tracking-tight uppercase italic">Tablo</span>
+      </div>
+      <nav class="flex items-center gap-1 mr-auto">
+        <button class="px-4 py-1.5 rounded-full text-sm font-bold tracking-wide text-white/40">Live TV</button>
+        <button class="px-4 py-1.5 rounded-full text-sm font-bold tracking-wide text-white/40">Guide</button>
+        <button class="px-4 py-1.5 rounded-full text-sm font-bold tracking-wide bg-accent/15 text-accent">Library</button>
+      </nav>
+      <div class="relative flex-1 max-w-sm">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        <input type="text" placeholder="Search programs, channels..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/5 text-sm placeholder-white/20 shadow-inner">
+        <span class="anno" style="top:-12px;right:8px">1</span>
+      </div>
+      <div class="flex items-center gap-4 ml-4">
+        <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black text-white/70 border border-white/10 bg-white/5">MR</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl mx-auto w-full px-6 py-10">
+    <div class="mb-8 flex items-baseline justify-between">
+      <div>
+        <h1 class="text-3xl font-black tracking-tight text-white mb-2 uppercase italic">Recordings</h1>
+        <p class="text-white/30 text-sm font-medium tracking-wide uppercase">Watch and manage your saved content</p>
+      </div>
+    </div>
+
+    <div class="grid gap-6" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
+      <!-- NCIS episode -->
+      <div class="relative">
+      <div class="group flex flex-col bg-surface-raised border border-surface-border rounded-2xl overflow-hidden shadow-lg">
+        <div class="aspect-video bg-black/40 relative" style="background:linear-gradient(135deg,#12233f 0%,#0a1424 60%,#050a14 100%)">
+          <div class="w-full h-full flex items-center justify-center">
+            <p class="text-2xl font-black italic text-white/15 tracking-tight">NCIS</p>
+          </div>
+          <div class="absolute bottom-3 right-3 px-2 py-1 rounded bg-black/80 text-[10px] font-bold text-white tabular-nums">44 MIN</div>
+        </div>
+        <div class="p-5 flex flex-col gap-1">
+          <h3 class="font-bold text-white truncate leading-tight">NCIS</h3>
+          <p class="text-xs font-semibold text-accent/90 truncate">S38 E4 &middot; Cairo</p>
+          <p class="text-xs text-white/40 line-clamp-2 leading-relaxed min-h-[2.5rem]">Lucky and the team investigate a missing submarine officer in Alexandria, Virginia.</p>
+          <div class="mt-4 flex items-center justify-between">
+            <span class="text-[10px] font-black text-white/20 uppercase tracking-widest">Oct 28, 2026</span>
+            <button class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 opacity-40 cursor-not-allowed" title="Playback coming soon">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <span class="anno" style="top:-10px;right:-10px">3</span>
+      <span class="anno" style="bottom:26px;right:-10px">2</span>
+      </div>
+
+      <!-- Hawaii Five-0 -->
+      <div class="group flex flex-col bg-surface-raised border border-surface-border rounded-2xl overflow-hidden shadow-lg">
+        <div class="aspect-video bg-black/40 relative" style="background:linear-gradient(135deg,#0f2e2b 0%,#0a1d1c 60%,#051010 100%)">
+          <div class="w-full h-full flex items-center justify-center">
+            <p class="text-xl font-black italic text-white/15 tracking-tight">HAWAII FIVE-0</p>
+          </div>
+          <div class="absolute bottom-3 right-3 px-2 py-1 rounded bg-black/80 text-[10px] font-bold text-white tabular-nums">42 MIN</div>
+        </div>
+        <div class="p-5 flex flex-col gap-1">
+          <h3 class="font-bold text-white truncate leading-tight">Hawaii Five-0</h3>
+          <p class="text-xs font-semibold text-accent/90 truncate">S10 E2 &middot; Alias</p>
+          <p class="text-xs text-white/40 line-clamp-2 leading-relaxed min-h-[2.5rem]">Steve McGarrett's team tracks a stolen prototype across Oahu.</p>
+          <div class="mt-4 flex items-center justify-between">
+            <span class="text-[10px] font-black text-white/20 uppercase tracking-widest">Oct 26, 2026</span>
+            <button class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 opacity-40 cursor-not-allowed" title="Playback coming soon">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Drew Carey -->
+      <div class="group flex flex-col bg-surface-raised border border-surface-border rounded-2xl overflow-hidden shadow-lg">
+        <div class="aspect-video bg-black/40 relative" style="background:linear-gradient(135deg,#33270f 0%,#221a0a 60%,#120d05 100%)">
+          <div class="w-full h-full flex items-center justify-center">
+            <p class="text-lg font-black italic text-white/15 tracking-tight text-center px-4">THE DREW CAREY SHOW</p>
+          </div>
+          <div class="absolute bottom-3 right-3 px-2 py-1 rounded bg-black/80 text-[10px] font-bold text-white tabular-nums">22 MIN</div>
+        </div>
+        <div class="p-5 flex flex-col gap-1">
+          <h3 class="font-bold text-white truncate leading-tight">The Drew Carey Show</h3>
+          <p class="text-xs font-semibold text-accent/90 truncate">S5 E12 &middot; The Pilot</p>
+          <p class="text-xs text-white/40 line-clamp-2 leading-relaxed min-h-[2.5rem]">Drew and the crew of the boatyard take on a runaway client.</p>
+          <div class="mt-4 flex items-center justify-between">
+            <span class="text-[10px] font-black text-white/20 uppercase tracking-widest">Oct 24, 2026</span>
+            <button class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 opacity-40 cursor-not-allowed" title="Playback coming soon">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Waco movie: no S/E line -->
+      <div class="group flex flex-col bg-surface-raised border border-surface-border rounded-2xl overflow-hidden shadow-lg">
+        <div class="aspect-video bg-black/40 relative" style="background:linear-gradient(135deg,#241233 0%,#170b22 60%,#0c0612 100%)">
+          <div class="w-full h-full flex items-center justify-center px-4">
+            <p class="text-lg font-black italic text-white/15 tracking-tight text-center">WACO</p>
+          </div>
+          <div class="absolute bottom-3 right-3 px-2 py-1 rounded bg-black/80 text-[10px] font-bold text-white tabular-nums">50 MIN</div>
+        </div>
+        <div class="p-5 flex flex-col gap-1">
+          <h3 class="font-bold text-white truncate leading-tight">Waco: God, Guns and the Government Part 1</h3>
+          <p class="text-xs text-white/40 line-clamp-2 leading-relaxed min-h-[2.5rem]">A docuseries revisits the 1993 standoff at the Branch Davidian compound.</p>
+          <div class="mt-4 flex items-center justify-between">
+            <span class="text-[10px] font-black text-white/20 uppercase tracking-widest">Oct 21, 2026</span>
+            <button class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 opacity-40 cursor-not-allowed" title="Playback coming soon">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

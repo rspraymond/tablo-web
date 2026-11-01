@@ -114,6 +114,15 @@ tablo-web exposes an HDHomeRun-compatible tuner interface so Plex and Jellyfin c
 
 ---
 
+## Documentation
+
+- [CONTRIBUTING.md](CONTRIBUTING.md): setup, dev servers, commands, code style, testing, and PR guidelines.
+- [AGENTS.md](AGENTS.md): instructions for AI coding agents (required reading, acknowledgment, and the rules to honor).
+- [docs/design-system.md](docs/design-system.md): UI design system and tokens (theme, colors, styling decisions).
+- System design docs, one per core domain (auth, streaming, guide, library, IPTV, frontend), live in [docs/system-design/README.md](docs/system-design/README.md). The guide domain doc includes a reference table of the enriched fields (episode identity, qualifiers, channel attributes, next program) in [docs/system-design/03-channels-guide.md](docs/system-design/03-channels-guide.md).
+
+---
+
 ## Security
 
 - This application proxies sensitive requests to your local Tablo device.

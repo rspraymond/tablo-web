@@ -23,6 +23,8 @@ export interface Channel {
   network: string;
   kind: string;
   display_name: string;
+  logo_url?: string | null;
+  current_program?: Program | null;
 }
 
 export interface StreamStart {
@@ -39,6 +41,10 @@ export interface Program {
   duration: number;
   genres?: string[];
   kind?: string | null;
+  episode_title?: string | null;
+  season_number?: number;
+  episode_number?: number;
+  qualifiers?: string[];
 }
 
 export interface GuideChannel {
@@ -51,6 +57,10 @@ export interface GuideChannel {
   display_name: string;
   logo_url: string | null;
   current_program: Program | null;
+  resolution?: string | null;
+  favourite?: boolean;
+  flags?: string[];
+  next_program?: Program | null;
 }
 
 export interface GridChannel extends Omit<GuideChannel, 'current_program'> {
@@ -65,6 +75,9 @@ export interface Recording {
   start: string;
   duration: number;
   thumbnail: string | null;
+  episode_title?: string | null;
+  season_number?: number;
+  episode_number?: number;
 }
 
 async function* ndjsonStream<T>(path: string, signal?: AbortSignal): AsyncGenerator<T> {

@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { api, type GridChannel, type Program } from "../api/tablo";
+import { api, type GridChannel } from "../api/tablo";
+import {
+  type ContentFilter,
+  channelMatchesFilter,
+  gridRowMatchesSearch,
+  episodeLabel,
+} from "../lib/filters";
 
 interface Props {
   onPlay: (channel: GridChannel) => void;
+  search?: string;
 }
-
-type ContentFilter = "all" | "movies" | "sports" | "news" | "reality" | "documentary" | "ota" | "fast";
 
 const CONTENT_FILTERS: { id: ContentFilter; label: string; icon: string }[] = [
   { id: "all",          label: "All",          icon: "⊞" },
@@ -17,24 +22,6 @@ const CONTENT_FILTERS: { id: ContentFilter; label: string; icon: string }[] = [
   { id: "ota",          label: "Broadcast",     icon: "📡" },
   { id: "fast",         label: "Streaming",     icon: "⚡" },
 ];
-
-function airingMatchesFilter(air: Program, f: ContentFilter): boolean {
-  if (f === "all") return true;
-  const genres = air.genres ?? [];
-  if (f === "movies")       return air.kind === "movieAiring";
-  if (f === "sports")       return air.kind === "sportEvent" || genres.some(g => /sport/i.test(g));
-  if (f === "news")         return genres.some(g => /news/i.test(g));
-  if (f === "reality")      return genres.some(g => /reality/i.test(g));
-  if (f === "documentary")  return genres.some(g => /documentary/i.test(g));
-  return false; // ota/fast handled at channel level
-}
-
-function channelMatchesFilter(ch: GridChannel, f: ContentFilter): boolean {
-  if (f === "all")  return true;
-  if (f === "ota")  return ch.kind === "ota";
-  if (f === "fast") return ch.kind === "ott";
-  return ch.airings.some(a => airingMatchesFilter(a, f));
-}
 
 function useGridStream() {
   const [grid, setGrid] = useState<GridChannel[]>([]);
@@ -70,7 +57,7 @@ function useGridStream() {
   return { grid, loading };
 }
 
-export function GuideGridView({ onPlay }: Props) {
+export function GuideGridView({ onPlay, search = "" }: Props) {
   const { grid, loading: isLoading } = useGridStream();
   const [now, setNow] = useState(() => Date.now());
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
@@ -99,7 +86,9 @@ export function GuideGridView({ onPlay }: Props) {
   const nowLeft = ((now - startTime) / 1000 / 3600) * HOUR_WIDTH;
   const nowVisible = nowLeft >= 0 && nowLeft <= HOUR_WIDTH * TOTAL_HOURS;
 
-  const filteredGrid = contentFilter === "all" ? grid : grid.filter(ch => channelMatchesFilter(ch, contentFilter));
+  const filteredGrid = useMemo(() => {
+    return grid.filter(ch => channelMatchesFilter(ch, contentFilter) && gridRowMatchesSearch(ch, search));
+  }, [grid, contentFilter, search]);
 
   if (isLoading) {
     return (
@@ -171,6 +160,11 @@ export function GuideGridView({ onPlay }: Props) {
               <span className="text-[11px] font-bold text-white/60 tabular-nums">
                 {ch.major > 0 ? `${ch.major}.${ch.minor}` : "FAST"}
               </span>
+              {ch.network && (
+                <span className="text-[9px] font-bold text-white/30 uppercase tracking-wider truncate max-w-[5.5rem]">
+                  {ch.network}
+                </span>
+              )}
             </div>
 
             {/* Programs Timeline */}
@@ -196,6 +190,7 @@ export function GuideGridView({ onPlay }: Props) {
                   ? Math.max(0, Math.min(100, ((now - airStart) / (air.duration * 1000)) * 100))
                   : 0;
                 const isOnNow = progress > 0 && progress < 100;
+                const epLine = episodeLabel(air);
 
                 return (
                   <button
@@ -207,6 +202,11 @@ export function GuideGridView({ onPlay }: Props) {
                     <p className="text-[11px] font-bold text-white/80 truncate group-hover:text-accent transition-colors">
                       {air.title}
                     </p>
+                    {epLine ? (
+                      <p className="text-[10px] text-accent/80 line-clamp-1 mt-0.5">
+                        {epLine}
+                      </p>
+                    ) : null}
                     <p className="text-[10px] text-white/20 line-clamp-1 mt-0.5">
                       {air.description || "Live TV Event"}
                     </p>

@@ -1,42 +1,13 @@
 import { describe, it, expect } from "vitest";
-import type { GuideChannel, GridChannel, Program } from "../api/tablo";
-
-// ── replicated filter logic (mirrors ChannelGrid.tsx / GuideGridView.tsx) ──
-
-type ContentFilter = "all" | "movies" | "sports" | "news" | "reality" | "documentary" | "ota" | "fast";
-
-function matchesContentFilter(ch: GuideChannel, f: ContentFilter): boolean {
-  if (f === "all") return true;
-  if (f === "ota") return ch.kind === "ota";
-  if (f === "fast") return ch.kind === "ott";
-  const prog = ch.current_program;
-  if (!prog) return false;
-  const genres = prog.genres ?? [];
-  if (f === "movies")      return prog.kind === "movieAiring";
-  if (f === "sports")      return prog.kind === "sportEvent" || genres.some(g => /sport/i.test(g));
-  if (f === "news")        return genres.some(g => /news/i.test(g));
-  if (f === "reality")     return genres.some(g => /reality/i.test(g));
-  if (f === "documentary") return genres.some(g => /documentary/i.test(g));
-  return true;
-}
-
-function airingMatchesFilter(air: Program, f: ContentFilter): boolean {
-  if (f === "all") return true;
-  const genres = air.genres ?? [];
-  if (f === "movies")      return air.kind === "movieAiring";
-  if (f === "sports")      return air.kind === "sportEvent" || genres.some(g => /sport/i.test(g));
-  if (f === "news")        return genres.some(g => /news/i.test(g));
-  if (f === "reality")     return genres.some(g => /reality/i.test(g));
-  if (f === "documentary") return genres.some(g => /documentary/i.test(g));
-  return false;
-}
-
-function channelMatchesFilter(ch: GridChannel, f: ContentFilter): boolean {
-  if (f === "all")  return true;
-  if (f === "ota")  return ch.kind === "ota";
-  if (f === "fast") return ch.kind === "ott";
-  return ch.airings.some(a => airingMatchesFilter(a, f));
-}
+import type { GuideChannel, GridChannel, Program, Recording } from "../api/tablo";
+import {
+  matchesContentFilter,
+  channelMatchesFilter,
+  guideRowMatchesSearch,
+  gridRowMatchesSearch,
+  recordingMatchesSearch,
+  episodeLabel,
+} from "../lib/filters";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -145,5 +116,100 @@ describe("channelMatchesFilter (Guide Grid)", () => {
   it("no match if no airings have the right genre", () => {
     const ch = makeGrid("ota", [{ kind: "episode", genres: ["Comedy"] }]);
     expect(channelMatchesFilter(ch, "news")).toBe(false);
+  });
+});
+
+// ── Header search (shared across all tabs) ──────────────────────────────────
+
+describe("guideRowMatchesSearch", () => {
+  it("empty query matches everything", () => {
+    expect(guideRowMatchesSearch(makeGuide("ota"), "")).toBe(true);
+  });
+
+  it("matches call sign, network, display name", () => {
+    const ch = makeGuide("ota");
+    expect(guideRowMatchesSearch(ch, "TEST")).toBe(true);
+    expect(guideRowMatchesSearch(ch, "Test Channel")).toBe(true);
+    expect(guideRowMatchesSearch(ch, "unrelated")).toBe(false);
+  });
+
+  it("matches current program title", () => {
+    const ch = makeGuide("ota", { title: "NCIS" });
+    expect(guideRowMatchesSearch(ch, "ncis")).toBe(true);
+    expect(guideRowMatchesSearch(ch, "unrelated")).toBe(false);
+  });
+});
+
+describe("gridRowMatchesSearch", () => {
+  it("empty query matches everything", () => {
+    expect(gridRowMatchesSearch(makeGrid("ota"), "")).toBe(true);
+  });
+
+  it("matches channel identity fields", () => {
+    const ch = makeGrid("ota");
+    expect(gridRowMatchesSearch(ch, "TEST")).toBe(true);
+    expect(gridRowMatchesSearch(ch, "Test Channel")).toBe(true);
+  });
+
+  it("matches any airing title", () => {
+    const ch = makeGrid("ota", [{ title: "NCIS" }, { title: "Other" }]);
+    expect(gridRowMatchesSearch(ch, "ncis")).toBe(true);
+    expect(gridRowMatchesSearch(ch, "unrelated")).toBe(false);
+  });
+});
+
+describe("recordingMatchesSearch", () => {
+  function makeRec(partial: Partial<Recording> = {}): Recording {
+    return {
+      identifier: 1,
+      path: "/recordings/1",
+      title: "NCIS",
+      description: "Lucky and the team investigate a missing officer.",
+      start: new Date().toISOString(),
+      duration: 3600,
+      thumbnail: null,
+      ...partial,
+    };
+  }
+
+  it("empty query matches everything", () => {
+    expect(recordingMatchesSearch(makeRec(), "")).toBe(true);
+  });
+
+  it("matches title or description", () => {
+    expect(recordingMatchesSearch(makeRec(), "ncis")).toBe(true);
+    expect(recordingMatchesSearch(makeRec(), "missing officer")).toBe(true);
+    expect(recordingMatchesSearch(makeRec(), "unrelated")).toBe(false);
+  });
+});
+
+// ── Episode label ────────────────────────────────────────────────────────────
+
+describe("episodeLabel", () => {
+  it("returns null for null program", () => {
+    expect(episodeLabel(null)).toBeNull();
+  });
+
+  it("returns S/E with title when both present", () => {
+    const p: Program = { title: "NCIS", description: null, start: "", duration: 0,
+      season_number: 38, episode_number: 4, episode_title: "Cairo" };
+    expect(episodeLabel(p)).toBe("S38 E4 · Cairo");
+  });
+
+  it("returns S/E without title", () => {
+    const p: Program = { title: "NCIS", description: null, start: "", duration: 0,
+      season_number: 21, episode_number: 4 };
+    expect(episodeLabel(p)).toBe("S21 E4");
+  });
+
+  it("returns episode title alone when S/E absent", () => {
+    const p: Program = { title: "X", description: null, start: "", duration: 0,
+      episode_title: "Broken" };
+    expect(episodeLabel(p)).toBe("Broken");
+  });
+
+  it("returns null for movies/sports (no episode data)", () => {
+    const p: Program = { title: "Movie", description: null, start: "", duration: 0, kind: "movieAiring" };
+    expect(episodeLabel(p)).toBeNull();
   });
 });

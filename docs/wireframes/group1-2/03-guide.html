@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { theme: { extend: {
+  colors: { surface: { DEFAULT:'#0d0d14', raised:'#13131e', overlay:'#1a1a28', border:'rgba(255,255,255,0.08)' },
+             accent: { DEFAULT:'#5b8af5', glow:'rgba(91,138,245,0.25)' } },
+  fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+}}};
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { background:#0d0d14; color:#fff; font-family:Inter,system-ui,sans-serif; }
+  .glass { background:rgba(255,255,255,0.04); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.08); }
+  .no-scrollbar::-webkit-scrollbar { display:none; }
+  .anno { position:absolute; width:20px; height:20px; border-radius:9999px; background:#5b8af5; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 3px rgba(91,138,245,.35); z-index:50; }
+</style>
+</head>
+<body class="antialiased">
+<div class="min-h-screen flex flex-col bg-surface">
+  <header class="sticky top-0 z-10 glass border-b border-surface-border">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center gap-4">
+      <div class="flex items-center gap-2.5 mr-6">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-lg shadow-accent/20" style="background:linear-gradient(135deg,#5b8af5,#7c5bf5)">
+          <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 20.25h12m-7.5-3v3m3-3v3m-10.125-3h17.25c.621 0 1.125-.504 1.125-1.125V4.875C21 4.254 20.496 3.75 19.875 3.75H4.125C3.504 3.75 3 4.254 3 4.875v11.25c0 .621.504 1.125 1.125 1.125z" /></svg>
+        </div>
+        <span class="font-black text-lg tracking-tight uppercase italic">Tablo</span>
+      </div>
+      <nav class="flex items-center gap-1 mr-auto">
+        <button class="px-4 py-1.5 rounded-full text-sm font-bold tracking-wide text-white/40">Live TV</button>
+        <button class="px-4 py-1.5 rounded-full text-sm font-bold tracking-wide bg-accent/15 text-accent">Guide</button>
+        <button class="px-4 py-1.5 rounded-full text-sm font-bold tracking-wide text-white/40">Library</button>
+      </nav>
+      <div class="relative flex-1 max-w-sm">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        <input type="text" placeholder="Search programs, channels..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/5 text-sm placeholder-white/20 shadow-inner">
+        <span class="anno" style="top:-12px;right:8px">1</span>
+      </div>
+      <div class="flex items-center gap-4 ml-4">
+        <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black text-white/70 border border-white/10 bg-white/5">MR</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl mx-auto w-full px-6 py-10">
+    <div class="mb-8 flex items-baseline justify-between">
+      <div>
+        <h1 class="text-3xl font-black tracking-tight text-white mb-2 uppercase italic">TV Guide</h1>
+        <p class="text-white/30 text-sm font-medium tracking-wide uppercase">Traditional timeline view of all upcoming airings</p>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-white/5 overflow-hidden bg-black/10">
+      <!-- time ruler -->
+      <div class="flex border-b border-white/5 bg-black/20">
+        <div class="w-32 shrink-0 border-r border-white/5"></div>
+        <div class="relative h-full" style="width:2400px">
+          <div class="flex">
+            <div class="w-[400px] shrink-0 px-3 py-2 text-[10px] font-black text-white/30 uppercase tracking-widest border-r border-white/5">8 PM</div>
+            <div class="w-[400px] shrink-0 px-3 py-2 text-[10px] font-black text-white/30 uppercase tracking-widest border-r border-white/5">9 PM</div>
+            <div class="w-[400px] shrink-0 px-3 py-2 text-[10px] font-black text-white/30 uppercase tracking-widest border-r border-white/5">10 PM</div>
+            <div class="w-[400px] shrink-0 px-3 py-2 text-[10px] font-black text-white/30 uppercase tracking-widest border-r border-white/5">11 PM</div>
+            <div class="w-[400px] shrink-0 px-3 py-2 text-[10px] font-black text-white/30 uppercase tracking-widest border-r border-white/5">12 AM</div>
+            <div class="w-[400px] shrink-0 px-3 py-2 text-[10px] font-black text-white/30 uppercase tracking-widest">1 AM</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11.1 CBS -->
+      <div class="flex border-b border-white/5 hover:bg-white/[0.02]">
+        <div class="w-32 shrink-0 p-4 border-r border-white/5 flex flex-col items-center justify-center gap-1.5 bg-black/10 relative">
+          <div class="w-12 h-10 flex items-center justify-center bg-black/30 rounded border border-white/5 p-1">
+            <img src="https://lighthousetv-cdn.ewscloud.com/lighthousetv/prod/media/CBS_modified.png" class="max-w-full max-h-full object-contain">
+          </div>
+          <span class="text-[11px] font-bold text-white/60 tabular-nums">11.1</span>
+          <span class="text-[9px] font-bold text-white/30 uppercase tracking-wider truncate max-w-[5.5rem]">CBS</span>
+          <span class="anno" style="bottom:6px;right:-10px">2</span>
+        </div>
+        <div class="flex-1 overflow-x-auto no-scrollbar py-2 relative h-24">
+          <div class="relative h-full" style="width:2400px">
+            <div class="absolute top-2 bottom-2 bg-white/5 border-l border-white/10 p-3 flex flex-col text-left rounded-sm overflow-hidden" style="left:0;width:1396px">
+              <p class="text-[11px] font-bold text-white/80 truncate">NFL Football</p>
+              <p class="text-[10px] text-white/20 line-clamp-1 mt-0.5">Week 11: Sunday Night Football</p>
+              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-white/5"><div class="h-full bg-accent/70" style="width:42%"></div></div>
+            </div>
+            <div class="absolute top-2 bottom-2 bg-white/5 border-l border-white/10 p-3 flex flex-col text-left rounded-sm overflow-hidden" style="left:1400px;width:396px">
+              <p class="text-[11px] font-bold text-white/80 truncate">NFL Football: Postgame</p>
+              <p class="text-[10px] text-white/20 line-clamp-1 mt-0.5">Recap and highlights</p>
+            </div>
+            <div class="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-30" style="left:280px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5.4 ION: episode title inline -->
+      <div class="flex border-b border-white/5 hover:bg-white/[0.02]">
+        <div class="w-32 shrink-0 p-4 border-r border-white/5 flex flex-col items-center justify-center gap-1.5 bg-black/10">
+          <div class="w-12 h-10 flex items-center justify-center bg-black/30 rounded border border-white/5 p-1">
+            <img src="https://lighthousetv-cdn.ewscloud.com/lighthousetv/prod/media/ION_modified.png" class="max-w-full max-h-full object-contain">
+          </div>
+          <span class="text-[11px] font-bold text-white/60 tabular-nums">5.4</span>
+          <span class="text-[9px] font-bold text-white/30 uppercase tracking-wider truncate max-w-[5.5rem]">ION</span>
+        </div>
+        <div class="flex-1 overflow-x-auto no-scrollbar py-2 relative h-24">
+          <div class="relative h-full" style="width:2400px">
+            <div class="absolute top-2 bottom-2 bg-white/5 border-l border-white/10 p-3 flex flex-col text-left rounded-sm overflow-hidden" style="left:0;width:396px">
+              <p class="text-[11px] font-bold text-white/80 truncate">NCIS</p>
+              <p class="text-[10px] text-accent/80 line-clamp-1 mt-0.5">S38 E4 &middot; Cairo</p>
+              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-white/5"><div class="h-full bg-accent/70" style="width:25%"></div></div>
+              <span class="anno" style="top:-10px;right:-10px">3</span>
+            </div>
+            <div class="absolute top-2 bottom-2 bg-white/5 border-l border-white/10 p-3 flex flex-col text-left rounded-sm overflow-hidden" style="left:400px;width:396px">
+              <p class="text-[11px] font-bold text-white/80 truncate">NCIS: Los Angeles</p>
+              <p class="text-[10px] text-white/20 line-clamp-1 mt-0.5">S21 E4 &middot; Broken</p>
+            </div>
+            <div class="absolute top-2 bottom-2 bg-white/5 border-l border-white/10 p-3 flex flex-col text-left rounded-sm overflow-hidden" style="left:800px;width:396px">
+              <p class="text-[11px] font-bold text-white/80 truncate">NCIS</p>
+              <p class="text-[10px] text-white/20 line-clamp-1 mt-0.5">S38 E5 &middot; Unbroken</p>
+            </div>
+            <div class="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-30" style="left:280px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5.1 NBC -->
+      <div class="flex border-b border-white/5 hover:bg-white/[0.02]">
+        <div class="w-32 shrink-0 p-4 border-r border-white/5 flex flex-col items-center justify-center gap-1.5 bg-black/10">
+          <div class="w-12 h-10 flex items-center justify-center bg-black/30 rounded border border-white/5 p-1">
+            <img src="https://lighthousetv-cdn.ewscloud.com/lighthousetv/prod/media/NBC_modified.png" class="max-w-full max-h-full object-contain">
+          </div>
+          <span class="text-[11px] font-bold text-white/60 tabular-nums">5.1</span>
+          <span class="text-[9px] font-bold text-white/30 uppercase tracking-wider truncate max-w-[5.5rem]">NBC</span>
+        </div>
+        <div class="flex-1 overflow-x-auto no-scrollbar py-2 relative h-24">
+          <div class="relative h-full" style="width:2400px">
+            <div class="absolute top-2 bottom-2 bg-white/5 border-l border-white/10 p-3 flex flex-col text-left rounded-sm overflow-hidden" style="left:0;width:1596px">
+              <p class="text-[11px] font-bold text-white/80 truncate">NASCAR Cup Series</p>
+              <p class="text-[10px] text-white/20 line-clamp-1 mt-0.5">Live race coverage and pit lane analysis</p>
+              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-white/5"><div class="h-full bg-accent/70" style="width:50%"></div></div>
+            </div>
+            <div class="absolute top-2 bottom-2 bg-white/5 border-l border-white/10 p-3 flex flex-col text-left rounded-sm overflow-hidden" style="left:1600px;width:396px">
+              <p class="text-[11px] font-bold text-white/80 truncate">NASCAR: Race Recap</p>
+              <p class="text-[10px] text-white/20 line-clamp-1 mt-0.5">Highlights and driver interviews</p>
+            </div>
+            <div class="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-30" style="left:280px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 13.1 ABC -->
+      <div class="flex border-b border-white/5 hover:bg-white/[0.02]">
+        <div class="w-32 shrink-0 p-4 border-r border-white/5 flex flex-col items-center justify-center gap-1.5 bg-black/10">
+          <div class="w-12 h-10 flex items-center justify-center bg-black/30 rounded border border-white/5 p-1">
+            <img src="https://lighthousetv-cdn.ewscloud.com/lighthousetv/prod/media/ABC_modified.png" class="max-w-full max-h-full object-contain">
+          </div>
+          <span class="text-[11px] font-bold text-white/60 tabular-nums">13.1</span>
+          <span class="text-[9px] font-bold text-white/30 uppercase tracking-wider truncate max-w-[5.5rem]">ABC</span>
+        </div>
+        <div class="flex-1 overflow-x-auto no-scrollbar py-2 relative h-24">
+          <div class="relative h-full" style="width:2400px">
+            <div class="absolute top-2 bottom-2 bg-white/5 border-l border-white/10 p-3 flex flex-col text-left rounded-sm overflow-hidden" style="left:0;width:796px">
+              <p class="text-[11px] font-bold text-white/80 truncate">2026 TCS New York City Marathon</p>
+              <p class="text-[10px] text-white/20 line-clamp-1 mt-0.5">Live coverage of the world's largest marathon</p>
+              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-white/5"><div class="h-full bg-accent/70" style="width:61%"></div></div>
+            </div>
+            <div class="absolute top-2 bottom-2 bg-white/5 border-l border-white/10 p-3 flex flex-col text-left rounded-sm overflow-hidden" style="left:800px;width:1196px">
+              <p class="text-[11px] font-bold text-white/80 truncate">Marathon: Full Race Replay</p>
+              <p class="text-[10px] text-white/20 line-clamp-1 mt-0.5">Full race replay from start to finish</p>
+            </div>
+            <div class="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-30" style="left:280px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 57.3 CRIME -->
+      <div class="flex border-b border-white/5 hover:bg-white/[0.02]">
+        <div class="w-32 shrink-0 p-4 border-r border-white/5 flex flex-col items-center justify-center gap-1.5 bg-black/10">
+          <div class="w-12 h-10 flex items-center justify-center bg-black/30 rounded border border-white/5 p-1">
+            <img src="https://lighthousetv-cdn.ewscloud.com/lighthousetv/prod/media/CRIME_modified.png" class="max-w-full max-h-full object-contain">
+          </div>
+          <span class="text-[11px] font-bold text-white/60 tabular-nums">57.3</span>
+          <span class="text-[9px] font-bold text-white/30 uppercase tracking-wider truncate max-w-[5.5rem]">CRIME</span>
+        </div>
+        <div class="flex-1 overflow-x-auto no-scrollbar py-2 relative h-24">
+          <div class="relative h-full" style="width:2400px">
+            <div class="absolute top-2 bottom-2 bg-white/5 border-l border-white/10 p-3 flex flex-col text-left rounded-sm overflow-hidden" style="left:0;width:396px">
+              <p class="text-[11px] font-bold text-white/80 truncate">Crime Stories</p>
+              <p class="text-[10px] text-accent/80 line-clamp-1 mt-0.5">S12 E8 &middot; The Longest Night</p>
+              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-white/5"><div class="h-full bg-accent/70" style="width:15%"></div></div>
+            </div>
+            <div class="absolute top-2 bottom-2 bg-white/5 border-l border-white/10 p-3 flex flex-col text-left rounded-sm overflow-hidden" style="left:400px;width:396px">
+              <p class="text-[11px] font-bold text-white/80 truncate">Crime Stories: Cold Case Files</p>
+              <p class="text-[10px] text-white/20 line-clamp-1 mt-0.5">S12 E9 &middot; Vanishing Point</p>
+            </div>
+            <div class="absolute top-2 bottom-2 bg-white/5 border-l border-white/10 p-3 flex flex-col text-left rounded-sm overflow-hidden" style="left:800px;width:396px">
+              <p class="text-[11px] font-bold text-white/80 truncate">Crime Stories</p>
+              <p class="text-[10px] text-white/20 line-clamp-1 mt-0.5">S12 E10 &middot; Dead Reckoning</p>
+            </div>
+            <div class="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-30" style="left:280px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 522.43 CNN Originals (OTT) -->
+      <div class="flex border-b border-white/5 hover:bg-white/[0.02]">
+        <div class="w-32 shrink-0 p-4 border-r border-white/5 flex flex-col items-center justify-center gap-1.5 bg-black/10">
+          <div class="w-12 h-10 flex items-center justify-center bg-black/30 rounded border border-white/5 p-1">
+            <img src="https://lighthousetv-cdn.ewscloud.com/lighthousetv/prod/media/uploads/channels/CNNOriginalsmodified20251.png" class="max-w-full max-h-full object-contain">
+          </div>
+          <span class="text-[11px] font-bold text-white/60 tabular-nums">FAST</span>
+          <span class="text-[9px] font-bold text-white/30 uppercase tracking-wider truncate max-w-[5.5rem]">CNN Originals</span>
+        </div>
+        <div class="flex-1 overflow-x-auto no-scrollbar py-2 relative h-24">
+          <div class="relative h-full" style="width:2400px">
+            <div class="absolute top-2 bottom-2 bg-white/5 border-l border-white/10 p-3 flex flex-col text-left rounded-sm overflow-hidden" style="left:0;width:396px">
+              <p class="text-[11px] font-bold text-white/80 truncate">Waco: God, Guns and the Government Part 1</p>
+              <p class="text-[10px] text-white/20 line-clamp-1 mt-0.5">The 1993 standoff at the Branch Davidian compound</p>
+              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-white/5"><div class="h-full bg-accent/70" style="width:20%"></div></div>
+            </div>
+            <div class="absolute top-2 bottom-2 bg-white/5 border-l border-white/10 p-3 flex flex-col text-left rounded-sm overflow-hidden" style="left:400px;width:396px">
+              <p class="text-[11px] font-bold text-white/80 truncate">Waco: God, Guns and the Government Part 2</p>
+              <p class="text-[10px] text-white/20 line-clamp-1 mt-0.5">The aftermath and the legacy</p>
+            </div>
+            <div class="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-30" style="left:280px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

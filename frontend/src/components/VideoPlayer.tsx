@@ -8,19 +8,42 @@ interface Props {
   onClose: () => void;
 }
 
+/** Format seconds as H:MM:SS (or MM:SS under an hour) for the now-playing bar. */
+function formatElapsed(totalSeconds: number): string {
+  const secs = Math.max(0, Math.floor(totalSeconds));
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+}
+
 export function VideoPlayer({ channel, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { load, destroy, error: playerError } = usePlayer(videoRef);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [showControls, setShowControls] = useState(true);
   const [muted, setMuted] = useState(true);
+  const [nowTick, setNowTick] = useState(() => Date.now());
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(null);
+
+  // OTA broadcasts are MPEG-2 video, which browsers cannot decode, so they
+  // always go through the FFmpeg transcode path.
+  const transcoding = channel.kind === "ota";
+
+  // Ticks every 10 s while the player is open so the now-playing progress
+  // bar and elapsed readout stay current.
+  useEffect(() => {
+    const timer = setInterval(() => setNowTick(Date.now()), 10_000);
+    return () => clearInterval(timer);
+  }, []);
 
   const combinedError = apiError || playerError;
 
-  // Start stream on mount
+  // Start stream on mount; stop via ref so channel-change races still DELETE.
   useEffect(() => {
     let cancelled = false;
 
@@ -30,8 +53,11 @@ export function VideoPlayer({ channel, onClose }: Props) {
     const transcode = channel.kind === "ota" ? true : undefined;
     api.startStream(channel.identifier, transcode)
       .then(({ session_id, stream_url }) => {
-        if (cancelled) return;
-        setSessionId(session_id);
+        if (cancelled) {
+          api.stopStream(session_id).catch(() => {});
+          return;
+        }
+        sessionIdRef.current = session_id;
         load(stream_url);
         setLoading(false);
       })
@@ -45,15 +71,11 @@ export function VideoPlayer({ channel, onClose }: Props) {
     return () => {
       cancelled = true;
       destroy();
+      const sid = sessionIdRef.current;
+      sessionIdRef.current = null;
+      if (sid) api.stopStream(sid).catch(() => {});
     };
   }, [channel.identifier, load, destroy]);
-
-  // Stop stream on unmount
-  useEffect(() => {
-    return () => {
-      if (sessionId) api.stopStream(sessionId).catch(() => {});
-    };
-  }, [sessionId]);
 
   const toggleMute = useCallback(() => {
     const video = videoRef.current;
@@ -157,13 +179,51 @@ export function VideoPlayer({ channel, onClose }: Props) {
         </div>
 
         {/* Bottom bar */}
-        <div className="flex items-center justify-between pointer-events-auto">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-sm font-medium text-white/80">LIVE</span>
-          </div>
+        <div className="flex flex-col gap-4 pointer-events-auto">
+          {/* Now-playing bar */}
+          {channel.current_program && (() => {
+            const prog = channel.current_program;
+            const startMs = new Date(prog.start).getTime();
+            const totalSecs = prog.duration;
+            const elapsedSecs = Math.max(0, Math.min(totalSecs, Math.floor((nowTick - startMs) / 1000)));
+            const pct = totalSecs > 0 ? (elapsedSecs / totalSecs) * 100 : 0;
+            return (
+              <div className="w-full max-w-3xl mx-auto rounded-xl glass px-5 py-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-bold text-white/90 truncate">{prog.title || channel.display_name}</p>
+                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest shrink-0 ml-4">
+                    Started {new Date(prog.start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                  </p>
+                </div>
+                {prog.description && (
+                  <p className="text-xs text-white/40 line-clamp-1 mb-3">{prog.description}</p>
+                )}
+                <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
+                </div>
+                <div className="flex justify-between mt-1.5 text-[10px] font-medium text-white/30 tabular-nums">
+                  <span>{formatElapsed(elapsedSecs)}</span>
+                  <span>{formatElapsed(totalSecs)}</span>
+                </div>
+              </div>
+            );
+          })()}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-sm font-medium text-white/80">LIVE</span>
+              {transcoding && (
+                <span className="rounded-full bg-accent/20 border border-accent/40 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent flex items-center gap-1.5">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8a2 2 0 00-2 2v18a2 2 0 002 2h8a2 2 0 002-2V8.5L14 2.5a2 2 0 00-2-2h-1.5z" />
+                  </svg>
+                  Transcoding
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
             {/* Mute/unmute */}
             <button
               onClick={(e) => { e.stopPropagation(); toggleMute(); }}
@@ -196,6 +256,7 @@ export function VideoPlayer({ channel, onClose }: Props) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
               </svg>
             </button>
+          </div>
           </div>
         </div>
       </div>
