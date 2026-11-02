@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { usePlayer } from "../hooks/usePlayer";
 import { api } from "../api/tablo";
 import type { Channel } from "../api/tablo";
+import { clampVolume, stepVolume } from "../lib/volume";
 
 interface Props {
   channel: Channel;
@@ -27,6 +28,7 @@ export function VideoPlayer({ channel, onClose }: Props) {
   const [apiError, setApiError] = useState<string | null>(null);
   const [showControls, setShowControls] = useState(true);
   const [muted, setMuted] = useState(true);
+  const [volume, setVolume] = useState(1);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -84,6 +86,20 @@ export function VideoPlayer({ channel, onClose }: Props) {
     setMuted(video.muted);
   }, []);
 
+  // Moving the slider or pressing an arrow is an explicit "I want sound"
+  // gesture, so it also unmutes when the level goes above 0.
+  const applyVolume = useCallback((v: number) => {
+    const next = clampVolume(v);
+    setVolume(next);
+    const video = videoRef.current;
+    if (!video) return;
+    video.volume = next;
+    if (next > 0 && video.muted) {
+      video.muted = false;
+      setMuted(false);
+    }
+  }, []);
+
   // iOS Safari uses webkitEnterFullscreen on the video element itself;
   // standard requestFullscreen() is not supported on iOS.
   const enterFullscreen = useCallback(() => {
@@ -114,11 +130,20 @@ export function VideoPlayer({ channel, onClose }: Props) {
       if (e.key === "Escape" || e.key === "q") onClose();
       if (e.key === "f") enterFullscreen();
       if (e.key === "m") toggleMute();
+      if (e.key === "ArrowUp") {
+        // preventDefault stops the page behind the overlay from scrolling.
+        e.preventDefault();
+        applyVolume(stepVolume(volume, 1));
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        applyVolume(stepVolume(volume, -1));
+      }
       resetHideTimer();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onClose, enterFullscreen, toggleMute, resetHideTimer]);
+  }, [onClose, enterFullscreen, toggleMute, applyVolume, volume, resetHideTimer]);
 
   return (
     <div
@@ -245,6 +270,19 @@ export function VideoPlayer({ channel, onClose }: Props) {
                 </svg>
               )}
             </button>
+
+            {/* Volume */}
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={volume}
+              onChange={(e) => applyVolume(Number(e.target.value))}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="w-24 accent-accent"
+              title="Volume"
+            />
 
             {/* Fullscreen */}
             <button

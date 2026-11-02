@@ -11,7 +11,7 @@ The frontend is a single-page React app that presents live TV, a traditional gui
 5. Render the traditional timeline guide from the grid NDJSON stream (`frontend/src/components/GuideGridView.tsx`).
 6. Render the recordings library with loading, error, and refetch states (`frontend/src/components/LibraryView.tsx`).
 7. Play a channel: start a stream (always transcoding OTA), load it into the video element via hls.js or native HLS, and stop the stream on unmount (`frontend/src/components/VideoPlayer.tsx`, `frontend/src/hooks/usePlayer.ts`).
-8. Provide player controls: mute, fullscreen (iOS-aware), auto-hiding overlay, and keyboard shortcuts (`VideoPlayer.tsx`).
+8. Provide player controls: mute, volume slider (ArrowUp/ArrowDown), fullscreen (iOS-aware), auto-hiding overlay, and keyboard shortcuts (`VideoPlayer.tsx`).
 9. Offer a profile menu with logout and a downloadable server diagnostics report (`frontend/src/components/ProfileMenu.tsx`).
 10. Expose a typed API client for all backend endpoints, including the NDJSON stream consumer (`frontend/src/api/tablo.ts`).
 

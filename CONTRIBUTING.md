@@ -33,6 +33,8 @@ docker compose up --build
 
 Open http://localhost:7070. The backend runs on port 8000 but is internal to the Compose network; Nginx in the frontend container proxies `/api/*` to it. Login credentials are persisted in the `data` volume (`/data/config.json`).
 
+The backend service passes through the NVIDIA GPU (`deploy.resources.reservations.devices` in `docker-compose.yml`) and sets `NVIDIA_DRIVER_CAPABILITIES=all` so the NVENC libraries are mounted. That requires the [nvidia container runtime](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) registered with Docker; on a machine without it, install the toolkit or drop the `deploy` block (the app falls back to libx264).
+
 For local Dockerfile tweaks (for example, testing a build change), create a gitignored `docker-compose.override.yml` that points a service at a `Dockerfile.local` instead of the committed one. Both are in `.gitignore` so they do not leak into commits.
 
 ### Option B: Local dev servers (fastest iteration)
@@ -60,7 +62,7 @@ Open http://localhost:5173. The Vite proxy means no CORS setup is needed during 
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `TABLO_TRANSCODE_ENCODER` | `auto` | Transcode encoder selection: `auto`, `cpu`, or `nvenc` (NVENC for NVIDIA GPUs; the image ships Ubuntu's FFmpeg with `h264_nvenc`) |
+| `TABLO_TRANSCODE_ENCODER` | `auto` | Transcode encoder selection: `auto`, `libx264`, or `nvenc` (NVENC for NVIDIA GPUs; the image ships Ubuntu's FFmpeg with `h264_nvenc`) |
 
 All other configuration (Tablo email/password, selected device) is written to `/data/config.json` by the app at login time.
 
@@ -102,6 +104,8 @@ The UI is React + Tailwind CSS with a minimal custom theme: a `surface` color sc
 
 ## Testing conventions
 
+The suites follow the testing pyramid: many fast unit tests, a few component tests, no E2E yet. See [docs/testing.md](docs/testing.md) for where to add each kind and how to mock the API in component tests.
+
 - **Backend:** tests live in `backend/tests/` and use FastAPI's `TestClient` against `app.main:app`. Name files `test_<domain>.py` matching the route module. Cover the happy path plus the error mapping (device failure to HTTP status) for each endpoint you touch.
 - **Frontend:** tests live in `frontend/src/__tests__/` and use Vitest + React Testing Library. Test observable behavior (rendered text, user events), not implementation details.
 - Run the suite for the area you touched before opening a PR; CI runs both suites on every PR.
@@ -134,5 +138,6 @@ Releases are cut by pushing a `v*` tag. The release workflow builds and pushes `
 - [README.md](README.md): user-facing setup and feature docs
 - [AGENTS.md](AGENTS.md): instructions for AI coding agents
 - [docs/design-system.md](docs/design-system.md): UI theme, tokens, and styling decisions
+- [docs/testing.md](docs/testing.md): where and how to add tests (pyramid guide)
 - [docs/system-design/README.md](docs/system-design/README.md): per-domain system design docs (auth, streaming, guide, library, IPTV, frontend)
 
