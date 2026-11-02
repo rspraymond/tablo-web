@@ -29,6 +29,13 @@ export function VideoPlayer({ channel, onClose }: Props) {
   const [showControls, setShowControls] = useState(true);
   const [muted, setMuted] = useState(true);
   const [volume, setVolume] = useState(1);
+  // Latest volume for the keyboard handler: reading it from a ref keeps the
+  // keydown effect's deps stable, so the global listener is registered once
+  // per mount instead of being torn down and re-added on every volume change.
+  const volumeRef = useRef(1);
+  useEffect(() => {
+    volumeRef.current = volume;
+  }, [volume]);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -133,17 +140,17 @@ export function VideoPlayer({ channel, onClose }: Props) {
       if (e.key === "ArrowUp") {
         // preventDefault stops the page behind the overlay from scrolling.
         e.preventDefault();
-        applyVolume(stepVolume(volume, 1));
+        applyVolume(stepVolume(volumeRef.current, 1));
       }
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        applyVolume(stepVolume(volume, -1));
+        applyVolume(stepVolume(volumeRef.current, -1));
       }
       resetHideTimer();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onClose, enterFullscreen, toggleMute, applyVolume, volume, resetHideTimer]);
+  }, [onClose, enterFullscreen, toggleMute, applyVolume, resetHideTimer]);
 
   return (
     <div

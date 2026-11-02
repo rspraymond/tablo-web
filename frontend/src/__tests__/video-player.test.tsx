@@ -43,4 +43,34 @@ describe("VideoPlayer volume", () => {
     expect(video!.muted).toBe(false);
     expect(video!.volume).toBe(0.5);
   });
+
+  it("keeps the keydown listener registered once across volume changes", async () => {
+    render(<VideoPlayer channel={channel} onClose={() => {}} />);
+    const slider = await screen.findByRole("slider");
+
+    // The keyboard effect must not tear down and re-register the global
+    // keydown listener on every slider tick: that churn is what made Chrome
+    // stutter while dragging the volume.
+    const addSpy = vi.spyOn(window, "addEventListener");
+    const keydownAdds = () => addSpy.mock.calls.filter((c) => c[0] === "keydown").length;
+    const baseline = keydownAdds();
+
+    fireEvent.change(slider, { target: { value: "0.5" } });
+    fireEvent.change(slider, { target: { value: "0.25" } });
+
+    expect(keydownAdds()).toBe(baseline);
+    addSpy.mockRestore();
+  });
+
+  it("steps volume from the current level on ArrowUp after a slider change", async () => {
+    const { container } = render(<VideoPlayer channel={channel} onClose={() => {}} />);
+    const slider = await screen.findByRole("slider");
+    const video = container.querySelector("video");
+    expect(video).not.toBeNull();
+
+    fireEvent.change(slider, { target: { value: "0.5" } });
+    fireEvent.keyDown(window, { key: "ArrowUp" });
+
+    expect(video!.volume).toBe(0.55);
+  });
 });

@@ -107,6 +107,10 @@ export function ChannelGrid({ onLogout }: Props) {
     });
   }, [channels, contentFilter, filter]);
 
+  // Stable identity so VideoPlayer's keyboard effect does not re-register its
+  // window keydown listener on every ChannelGrid render (guide stream updates).
+  const handlePlayerClose = useCallback(() => setPlaying(null), []);
+
   const handlePlay = (ch: GuideChannel | GridChannel) => {
     const isGrid = 'airings' in ch;
     const guideCh: GuideChannel = {
@@ -129,7 +133,7 @@ export function ChannelGrid({ onLogout }: Props) {
         <VideoPlayer
           key={playing.identifier}
           channel={playing}
-          onClose={() => setPlaying(null)}
+          onClose={handlePlayerClose}
         />
       )}
 
