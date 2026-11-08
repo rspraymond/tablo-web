@@ -1,6 +1,8 @@
 """Minimal working version."""
 
 import asyncio
+import os
+import shutil
 import subprocess
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
@@ -18,7 +20,101 @@ TRANSCODE_DIR.mkdir(exist_ok=True)
 
 transcode_procs: dict[str, subprocess.Popen] = {}
 
+# Sessions already retried with CPU encoding after a transcoder crash.
+cpu_retry_sessions: set[str] = set()
+
 MAX_TRANSCODE_SESSIONS = 4
+
+# Cached for process life — never re-probe on every tune.
+_video_encoder: str | None = None
+
+
+def _resolve_video_encoder() -> str:
+    """Pick h264_nvenc or libx264 once per process (TABLO_TRANSCODE_ENCODER)."""
+    global _video_encoder
+    if _video_encoder is not None:
+        return _video_encoder
+
+    pref = os.environ.get("TABLO_TRANSCODE_ENCODER", "auto").strip().lower()
+    if pref == "libx264":
+        _video_encoder = "libx264"
+        return _video_encoder
+    if pref == "nvenc":
+        _video_encoder = "h264_nvenc"
+        return _video_encoder
+
+    # auto: one-shot probe. The encoders list is not enough; open must
+    # succeed at the worst-case resolution we actually encode (1080p), since
+    # a busy GPU may accept a tiny session but fail a 1080p one.
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-encoders"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        has_nvenc = "h264_nvenc" in (result.stdout or "") + (result.stderr or "")
+        if has_nvenc and Path("/dev/nvidia0").exists():
+            probe = subprocess.run(
+                [
+                    "ffmpeg",
+                    "-hide_banner",
+                    "-y",
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    "testsrc=size=1920x1080:rate=30",
+                    "-t",
+                    "0.5",
+                    "-c:v",
+                    "h264_nvenc",
+                    "-f",
+                    "null",
+                    "-",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if probe.returncode == 0:
+                _video_encoder = "h264_nvenc"
+            else:
+                _video_encoder = "libx264"
+        else:
+            _video_encoder = "libx264"
+    except Exception:
+        _video_encoder = "libx264"
+    return _video_encoder
+
+
+def _cleanup_session_artifacts(session_id: str) -> None:
+    """Kill transcoder and wipe session dir for one id (idempotent)."""
+    if proc := transcode_procs.pop(session_id, None):
+        try:
+            proc.kill()
+            proc.wait(timeout=3)
+        except Exception:
+            try:
+                proc.terminate()
+            except Exception:
+                pass
+    session_dir = TRANSCODE_DIR / session_id
+    if session_dir.exists():
+        try:
+            shutil.rmtree(session_dir)
+        except Exception:
+            pass
+    cpu_retry_sessions.discard(session_id)
+    state.stop_session(session_id)
+
+
+def stop_all_live_sessions() -> None:
+    """One cleanup pass before a new tune — avoids duplicate Tablo sessions."""
+    for sid in list(state.streams.keys()):
+        _cleanup_session_artifacts(sid)
+    # Orphan transcoder procs with no state entry
+    for sid in list(transcode_procs.keys()):
+        _cleanup_session_artifacts(sid)
 
 # Kill any FFmpeg processes left over from a previous run and wipe stale dirs.
 # After a container restart transcode_procs is empty but old FFmpeg processes
@@ -30,7 +126,8 @@ def _startup_cleanup():
         result = subprocess.run(["pgrep", "-f", "tablo_transcode"], capture_output=True, text=True)
         for pid in result.stdout.split():
             try:
-                import os; os.kill(int(pid), signal.SIGKILL)
+                import os
+                os.kill(int(pid), signal.SIGKILL)
             except Exception:
                 pass
     except Exception:
@@ -70,6 +167,25 @@ async def transcoded_stream(session_id: str, path: str, request: Request):
             if file_path.exists():
                 break
             await asyncio.sleep(0.5)
+
+        # Transcoder died before writing the playlist (e.g. NVENC could not
+        # allocate on a busy GPU). Retry once with CPU encoding.
+        proc = transcode_procs.get(session_id)
+        if (
+            proc is not None
+            and proc.poll() is not None
+            and session_id not in cpu_retry_sessions
+        ):
+            cpu_retry_sessions.add(session_id)
+            sess = state.get_session(session_id)
+            if sess is not None:
+                await start_transcoder(
+                    session_id, sess.stream.playlist_url, encoder="libx264"
+                )
+                for _ in range(20):
+                    if file_path.exists():
+                        break
+                    await asyncio.sleep(0.5)
 
     if not file_path.exists() or not file_path.is_file():
         # Check if FFmpeg is still alive to provide a better error
@@ -116,6 +232,9 @@ async def start_stream(
     if not state.is_authenticated:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
+    # Single-viewer host: replace any prior live session before tuning again.
+    stop_all_live_sessions()
+
     try:
         session_id, sess = await state.start_stream(identifier)
     except RuntimeError as e:
@@ -134,7 +253,8 @@ async def start_stream(
         "session_id": session_id,
         "proxy_url": f"/api/hls/{session_id}/playlist.m3u8",
         "stream_url": stream_url,
-        "transcoded": transcode
+        "transcoded": transcode,
+        "encoder": _resolve_video_encoder() if transcode else None,
     }
 
 
@@ -146,26 +266,7 @@ async def start_stream(
 async def stop_stream(session_id: str):
     if not state.is_authenticated:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    if proc := transcode_procs.pop(session_id, None):
-        proc.kill()
-        try:
-            proc.wait(timeout=3)
-        except subprocess.TimeoutExpired:
-            proc.terminate()
-
-    session_dir = TRANSCODE_DIR / session_id
-    if session_dir.exists():
-        for f in session_dir.glob("*"):
-            try:
-                f.unlink()
-            except Exception:
-                pass
-        try:
-            session_dir.rmdir()
-        except Exception:
-            pass
-
-    state.stop_session(session_id)
+    _cleanup_session_artifacts(session_id)
     return {"ok": True}
 
 
@@ -340,53 +441,71 @@ async def transcode_status(session_id: str):
 # Start FFmpeg
 # ---------------------------------------------------------------------------
 
-async def start_transcoder(session_id: str, input_url: str):
+async def start_transcoder(session_id: str, input_url: str, encoder: str | None = None):
     # Evict oldest session if at the cap to prevent CPU exhaustion from zombies
     if len(transcode_procs) >= MAX_TRANSCODE_SESSIONS:
-        oldest_id, oldest_proc = next(iter(transcode_procs.items()))
-        try:
-            oldest_proc.kill()
-            oldest_proc.wait(timeout=2)
-        except Exception:
-            pass
-        transcode_procs.pop(oldest_id, None)
-        import shutil
-        try:
-            shutil.rmtree(TRANSCODE_DIR / oldest_id)
-        except Exception:
-            pass
+        oldest_id = next(iter(transcode_procs.keys()))
+        _cleanup_session_artifacts(oldest_id)
 
     session_dir = TRANSCODE_DIR / session_id
     session_dir.mkdir(exist_ok=True, parents=True)
 
     log_file = session_dir / "ffmpeg.log"
+    encoder = encoder or _resolve_video_encoder()
 
+    # Shared: deinterlace 1080i MPEG-2 once, AAC stereo, ~7 Mbps HLS ceiling.
     cmd = [
         "ffmpeg",
         "-y",
         "-protocol_whitelist", "file,http,https,tcp,tls,crypto",
         "-i", input_url,
-        # yadif: deinterlace 1080i OTA broadcast so browsers can render video
-        "-vf", "yadif",
-        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
-        "-maxrate", "2000k", "-bufsize", "4000k",
-        "-pix_fmt", "yuv420p", "-g", "60",
-        "-c:a", "aac", "-b:a", "128k", "-ac", "2",
+        "-vf", "bwdif=mode=send_field:parity=auto:deint=all",
+    ]
+    if encoder == "h264_nvenc":
+        cmd += [
+            "-c:v", "h264_nvenc",
+            "-preset", "p4",
+            "-rc", "vbr",
+            "-cq", "21",
+            "-b:v", "0",
+            "-maxrate", "7000k",
+            "-bufsize", "14000k",
+            "-profile:v", "high",
+            "-pix_fmt", "yuv420p",
+            "-g", "60",
+        ]
+    else:
+        # CPU fallback — keep prior LAN-tuned libx264 settings.
+        cmd += [
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-profile:v", "high",
+            "-crf", "21",
+            "-maxrate", "7000k",
+            "-bufsize", "14000k",
+            "-pix_fmt", "yuv420p",
+            "-g", "60",
+        ]
+    cmd += [
+        "-c:a", "aac",
+        "-b:a", "192k",
+        "-ac", "2",
         "-f", "hls",
-        "-hls_time", "6",
-        "-hls_list_size", "6",
+        "-hls_time", "4",
+        "-hls_list_size", "12",
         "-hls_segment_filename", "%03d.ts",
         "-hls_flags", "delete_segments+independent_segments",
         "-loglevel", "info",
-        "playlist.m3u8"
+        "playlist.m3u8",
     ]
 
     with open(log_file, "w") as f:
         f.write(f"Starting FFmpeg for session {session_id}\n")
+        f.write(f"Encoder: {encoder}\n")
         f.write(f"Input: {input_url}\n")
         f.write(f"Command: {' '.join(cmd)}\n\n")
         f.flush()
-        
+
         proc = subprocess.Popen(
             cmd,
             stdout=f,

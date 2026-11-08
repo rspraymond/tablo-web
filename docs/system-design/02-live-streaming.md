@@ -8,7 +8,7 @@ Browsers cannot play the Tablo device's raw HLS directly: OTA channels arrive as
 2. Single-viewer host semantics: every new tune stops all prior live sessions first, killing their transcoders and wiping their artifacts (`stream.py` `stop_all_live_sessions`).
 3. Raw HLS proxy: serve the Tablo playlist and segments under `/api/hls/{session_id}/...`, rewriting manifest entries to point back through the proxy and preserving query tokens (`stream.py` `hls_proxy`, `_rewrite_manifest`).
 4. Transcoded HLS: with `?transcode=true`, spawn FFmpeg writing 4-second HLS segments to a per-session directory, served under `/api/transcoded/{session_id}/...` (`stream.py` `start_transcoder`, `transcoded_stream`).
-5. Video encoder selection: honor `TABLO_TRANSCODE_ENCODER`, otherwise probe once per process whether `h264_nvenc` actually works and fall back to `libx264` (`stream.py` `_resolve_video_encoder`).
+5. Video encoder selection: honor `TABLO_TRANSCODE_ENCODER`, otherwise probe once per process whether `h264_nvenc` actually works at 1080p (the worst case we encode) and fall back to `libx264` (`stream.py` `_resolve_video_encoder`).
 6. Stop a stream and clean up all artifacts (FFmpeg process, session directory, state entry) (`stream.py` `stop_stream`, DELETE `/api/stream/{session_id}`, `_cleanup_session_artifacts`).
 7. Report transcoder status with the last 20 lines of `ffmpeg.log` (`stream.py` `transcode_status`, GET `/api/transcode/status/{session_id}`).
 8. Recover from container restarts: kill orphaned FFmpeg processes and wipe stale session directories at import time (`stream.py` `_startup_cleanup`).
@@ -16,8 +16,9 @@ Browsers cannot play the Tablo device's raw HLS directly: OTA channels arrive as
 ## Non-Functional Requirements
 - Max 4 concurrent transcode sessions (`MAX_TRANSCODE_SESSIONS = 4`); the oldest is evicted LRU-style when the cap is hit, preventing CPU exhaustion from zombie transcoders.
 - Transcode profile: deinterlace with `bwdif`, H.264 high profile, ~7 Mbps ceiling (`-maxrate 7000k -bufsize 14000k`), AAC stereo 192 k, 4 s segments, `hls_list_size 12`, `delete_segments` so the session dir stays small.
-- NVENC is chosen only if the encoder is listed, `/dev/nvidia0` exists, and a 0.5 s test encode succeeds; the choice is cached for process life.
-- The first `playlist.m3u8` request waits up to 10 s (20 x 0.5 s polls) for FFmpeg to produce the manifest before 404-ing.
+- NVENC is chosen only if the encoder is listed, `/dev/nvidia0` exists, and a 0.5 s test encode at 1920x1080 succeeds; the choice is cached for process life. A busy GPU (for example one shared with a local LLM) may accept a tiny session but fail a 1080p one, which is why the probe encodes at full size.
+- If the transcoder dies before writing `playlist.m3u8` (e.g. NVENC could not allocate), the first playlist request restarts it once with `libx264` (`stream.py` `cpu_retry_sessions`); a live transcoder is never restarted mid-startup.
+- The first `playlist.m3u8` request waits up to 10 s (20 x 0.5 s polls) for FFmpeg to produce the manifest before 404-ing (and up to 10 s more after a CPU fallback restart).
 - Session IDs are hex-validated and segment paths are normalized against the session dir to block path traversal (`transcoded_stream`).
 - Nginx disables proxy buffering for `/api/*` and holds HLS connections open for 1 h (`frontend/nginx.conf`), so segments flow without buffering stalls.
 - The frontend always requests `transcode=true` for OTA channels because MPEG-2 video is unrenderable in browsers (`frontend/src/components/VideoPlayer.tsx`).

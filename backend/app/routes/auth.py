@@ -38,6 +38,7 @@ async def login(req: LoginRequest):
         devices = await state.login(req.email, req.password)
     except Exception as e:
         raise HTTPException(status_code=401, detail=str(e))
+    state.schedule_guide_warm()
     return LoginResponse(
         devices=[DeviceOut(sid=d.sid, name=d.name, local_url=d.local_url) for d in devices],
         active_sid=state.active_device.sid if state.active_device else None,
@@ -50,6 +51,7 @@ async def select_device(sid: str):
         dev = await state.select_device(sid)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    state.schedule_guide_warm()
     return {"sid": dev.sid, "name": dev.name}
 
 

@@ -34,6 +34,23 @@ def _genres_for(ad: dict) -> list:
     return ad.get("genres") or _EVENT_GENRES.get(ad.get("event_type"), [])
 
 
+def _qualifiers_for(a: dict, ad: dict | None = None) -> list:
+    """String-array qualifiers from any Tablo payload shape.
+
+    Device airings carry a top-level string list; cloud airings carry an int
+    bitmask plus a `qualifierTags` string list. Only lists pass through, so
+    the API never sends a raw bitmask to the frontend.
+    """
+    for candidate in (
+        a.get("qualifierTags"),
+        a.get("qualifiers"),
+        ad.get("qualifiers") if ad is not None else None,
+    ):
+        if isinstance(candidate, list):
+            return candidate
+    return []
+
+
 def _next_airing(airings: list, now) -> dict | None:
     """Earliest airing starting strictly after `now`, or None if there is none."""
     best = None
@@ -277,7 +294,7 @@ class AppState:
                                 "duration": a.get("duration"),
                                 "genres": a.get("genres") or [],
                                 "kind": a.get("kind"),
-                                "qualifiers": a.get("qualifiers") or [],
+                                "qualifiers": _qualifiers_for(a),
                                 **_episode_fields(a),
                             }
                 except Exception:
@@ -375,7 +392,7 @@ class AppState:
                     "duration": duration,
                     "genres": _genres_for(ad),
                     "kind": ad.get("event_type"),
-                    "qualifiers": ad.get("qualifiers") or [],
+                    "qualifiers": _qualifiers_for(a, ad),
                     **_episode_fields(a),
                 }
                 airings_by_path.setdefault(c_path, []).append(airing)
@@ -479,7 +496,7 @@ class AppState:
                     "duration": duration,
                     "genres": _genres_for(ad),
                     "kind": ad.get("event_type"),
-                    "qualifiers": ad.get("qualifiers") or [],
+                    "qualifiers": _qualifiers_for(a, ad),
                     **_episode_fields(a),
                 }
                 airings_by_path.setdefault(c_path, []).append(airing)
@@ -747,7 +764,7 @@ class AppState:
                 "duration": ad.get("duration"),
                 "genres": _genres_for(ad),
                 "kind": ad.get("event_type"),
-                "qualifiers": ad.get("qualifiers") or [],
+                "qualifiers": _qualifiers_for(a, ad),
                 **_episode_fields(a),
             })
 

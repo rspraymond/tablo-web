@@ -53,7 +53,7 @@ Guide, grid, and stream rows carry extra display fields beyond the raw device da
 | Field | Where | Source | Used for |
 |---|---|---|---|
 | `episode_title`, `season_number`, `episode_number` | program shape (guide, grid airings, recordings) | Device airing/recording detail `episode` object (`state.py` `_episode_fields`) | "S38 E4 · Title" line via `episodeLabel` in ChannelCard, GuideGridView, LibraryView. |
-| `qualifiers` | program shape | Device airing detail | LIVE/CC badges on ChannelCard. |
+| `qualifiers` | program shape | Device airing top-level list or cloud `qualifierTags`; int bitmasks normalized to `[]` (`_qualifiers_for`) | LIVE/CC badges on ChannelCard. |
 | `resolution` | channel-level | Device channel detail (`c_info`) | HD badge on ChannelCard. |
 | `favourite` | channel-level | Device channel detail (`c_info`) | Favourite star badge on ChannelCard. |
 | `next_program` | guide rows | `_next_airing`: earliest airing starting strictly after now, from the same airings list as `current_program` | "Next HH:MM · Title" line on ChannelCard. |

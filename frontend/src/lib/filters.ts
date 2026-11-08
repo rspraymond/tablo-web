@@ -79,3 +79,28 @@ export function episodeLabel(air: Program | null | undefined): string | null {
   if (title) return title;
   return null;
 }
+
+// ── Channel card badges ─────────────────────────────────────────────────────
+
+export type BadgeKind = "live" | "cc" | "hd" | "favourite";
+
+export interface Badge {
+  kind: BadgeKind;
+  label: string;
+}
+
+/** Qualifier/resolution/favourite badges for the card title row. */
+export function badgesFor(channel: GuideChannel): Badge[] {
+  const badges: Badge[] = [];
+  // The API normalizes qualifiers to string[], but guard anyway: a non-array
+  // here used to crash the whole grid ("n.includes is not a function").
+  const rawQualifiers = channel.current_program?.qualifiers;
+  const qualifiers = Array.isArray(rawQualifiers) ? rawQualifiers : [];
+  if (qualifiers.includes("live")) badges.push({ kind: "live", label: "LIVE" });
+  if (qualifiers.includes("cc")) badges.push({ kind: "cc", label: "CC" });
+  if ((channel.resolution ?? "").toLowerCase().startsWith("hd")) {
+    badges.push({ kind: "hd", label: "HD" });
+  }
+  if (channel.favourite) badges.push({ kind: "favourite", label: "★" });
+  return badges;
+}

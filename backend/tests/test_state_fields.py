@@ -4,7 +4,13 @@ for the enrichment wiring (request_device monkeypatched, no live device)."""
 import asyncio
 from datetime import datetime, timedelta, timezone
 
-from app.state import AppState, _episode_fields, _genres_for, _next_airing
+from app.state import (
+    AppState,
+    _episode_fields,
+    _genres_for,
+    _next_airing,
+    _qualifiers_for,
+)
 
 
 def _iso(dt: datetime) -> str:
@@ -56,6 +62,32 @@ def test_genres_event_type_fallback():
 def test_genres_unknown_type_empty():
     assert _genres_for({"event_type": "episode"}) == []
     assert _genres_for({}) == []
+
+
+# ── _qualifiers_for ─────────────────────────────────────────────────────────
+
+
+def test_qualifiers_cloud_tags_win_over_int_bitmask():
+    a = {"qualifiers": 8, "qualifierTags": ["cc", "stereo"]}
+    assert _qualifiers_for(a) == ["cc", "stereo"]
+
+
+def test_qualifiers_device_top_level_list_passes_through():
+    a = {"qualifiers": ["live", "cc", "primetime"]}
+    assert _qualifiers_for(a) == ["live", "cc", "primetime"]
+
+
+def test_qualifiers_int_only_normalizes_to_empty():
+    # Cloud payloads observed in the wild: qualifiers 8, 9, 11, 3, 0 (ints)
+    assert _qualifiers_for({"qualifiers": 8}) == []
+    assert _qualifiers_for({"qualifiers": 0}) == []
+
+
+def test_qualifiers_airing_details_fallback():
+    # Device shape used by the enrichment wiring test: list inside airing_details
+    assert _qualifiers_for({}, {"qualifiers": ["live"]}) == ["live"]
+    assert _qualifiers_for({}, {"qualifiers": None}) == []
+    assert _qualifiers_for({}, {}) == []
 
 
 # ── _next_airing ────────────────────────────────────────────────────────────

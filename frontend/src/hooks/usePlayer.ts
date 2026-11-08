@@ -31,9 +31,15 @@ export function usePlayer(videoRef: React.RefObject<HTMLVideoElement | null>) {
     const forceNative = isIOS && isSafari;
 
     if (!forceNative && Hls.isSupported()) {
-      const hls = new Hls({ 
-        enableWorker: true, 
-        lowLatencyMode: true,
+      // Prefer stability over lowest latency on LAN: a few seconds behind
+      // live absorbs Tablo/FFmpeg hiccups better than lowLatencyMode.
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 10,
         backBufferLength: 90,
         manifestLoadingTimeOut: 20000,
         manifestLoadingMaxRetry: 10,
@@ -44,7 +50,7 @@ export function usePlayer(videoRef: React.RefObject<HTMLVideoElement | null>) {
         fragLoadingMaxRetry: 10,
         xhrSetup: (xhr) => {
           xhr.withCredentials = false;
-        }
+        },
       });
       
       hls.loadSource(url);

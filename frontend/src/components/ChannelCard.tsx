@@ -1,33 +1,11 @@
 import { useMemo } from "react";
 import type { GuideChannel } from "../api/tablo";
-import { episodeLabel } from "../lib/filters";
+import { episodeLabel, badgesFor, type Badge } from "../lib/filters";
 
 interface Props {
   channel: GuideChannel;
   now: number;
   onClick: () => void;
-}
-
-// ── Display decisions (pure) ───────────────────────────────────────────────
-
-type BadgeKind = "live" | "cc" | "hd" | "favourite";
-
-interface Badge {
-  kind: BadgeKind;
-  label: string;
-}
-
-/** Qualifier/resolution/favourite badges for the card title row. */
-function badgesFor(channel: GuideChannel): Badge[] {
-  const badges: Badge[] = [];
-  const qualifiers = channel.current_program?.qualifiers ?? [];
-  if (qualifiers.includes("live")) badges.push({ kind: "live", label: "LIVE" });
-  if (qualifiers.includes("cc")) badges.push({ kind: "cc", label: "CC" });
-  if ((channel.resolution ?? "").toLowerCase().startsWith("hd")) {
-    badges.push({ kind: "hd", label: "HD" });
-  }
-  if (channel.favourite) badges.push({ kind: "favourite", label: "★" });
-  return badges;
 }
 
 function BadgeChip({ badge }: { badge: Badge }) {

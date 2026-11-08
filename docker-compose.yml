@@ -7,6 +7,15 @@ services:
       - data:/data
     environment:
       - PYTHONUNBUFFERED=1
+      # Mount all NVIDIA driver libs (default set lacks libnvidia-encode for NVENC)
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     expose:
       - "8000"
     networks:
